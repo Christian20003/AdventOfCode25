@@ -1,54 +1,69 @@
-#!/usr/bin/python3
-import sys
-from functools import cache
-from collections import defaultdict, Counter, deque
+from typing import List, Tuple, Set
+from functools import reduce
 import math
 
-D = ""
-with open("./Day8/Input.txt", "r") as file:
-    D = file.read()
+PATH = './Day8/Input.txt'
+LIMIT = 1000
 
+class Distance:
+    def __init__(self, a: Tuple[int, int, int], b: Tuple[int, int, int], distance: float):
+        self.a = a
+        self.b = b
+        self.distance = distance
 
-P = []
-for line in D.splitlines():
-    x,y,z = [int(x) for x in line.split(',')]
-    P.append((x,y,z))
+def getDistances(data: List[Tuple[int, int, int]]) -> List[Distance]:
+    result = []
+    seen = set()
+    for (x1,y1,z1) in data:
+        for (x2,y2,z2) in data:
+            distance = math.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
+            if distance == 0: continue
+            if ((x2,y2,z2),(x1,y1,z1)) in seen: continue
+            result.append(Distance((x1,y1,z1), (x2,y2,z2), distance))
+            seen.add(((x1,y1,z1),(x2,y2,z2)))
+    result.sort(key=lambda x: x.distance)
+    return result
 
-D = []
-for i,(x1,y1,z1) in enumerate(P):
-    for j,(x2,y2,z2) in enumerate(P):
-        distance = math.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
-        if i>j:
-            D.append((distance, i, j))
-D = sorted(D)
+def solveTask1(data: List[Tuple[int, int, int]]) -> int:
+    distances = getDistances(data)
+    components: List[Set] = []
+    for idx, distance in enumerate(distances):
+        if idx == LIMIT: break
+        componenta = None
+        componentb = None
+        for component in components:
+            if componenta is not None and componentb is not None: break
+            if distance.a in component:
+                componenta = component
+            if distance.b in component:
+                componentb = component
+        if componenta is None and componentb is None:
+            components.append({distance.a, distance.b})
+        elif componenta is not None and componentb is None:
+            componenta.add(distance.b)
+        elif componenta is None and componentb is not None:
+            componentb.add(distance.a)
+        elif componenta == componentb: continue
+        else:
+            components.remove(componentb)
+            componenta.update(componentb)
+    components.sort(key=lambda x: x.__len__(), reverse=True)
+    return reduce(lambda x,y: x*y,(len(component) for component in components[0:3]))
 
-sume = 0
-for index in range(1000):
-    sume += D[index][0]
-print(sume)
+def parseFile() -> List[Tuple[int, int, int]]:
+    with open(PATH, 'r') as file:
+        result = []
+        content = file.readlines()
+        values = [line.split(',') for line in content]
+        for line in values:
+            result.append((int(line[0]), int(line[1]), int(line[2])))
+        return result
 
-UF = {i: i for i in range(len(P))}
-def find(x):
-    if x==UF[x]:
-        return x
-    UF[x] = find(UF[x])
-    return UF[x]
-def mix(x,y):
-    UF[find(x)] = find(y)
+def main():
+    data = parseFile()
+    solution1 = solveTask1(data)
 
-connections = 0
-for t,(_d, i, j) in enumerate(D):
-    if t==1000:
-        SZ = defaultdict(int)
-        for x in range(len(P)):
-            SZ[find(x)] += 1
-        S = sorted(SZ.values())
-        print(S[-1])
-        print(S[-2])
-        print(S[-3])
-        print(S[-1]*S[-2]*S[-3])
-    if find(i) != find(j):
-        connections += 1
-        if connections==len(P)-1:
-            print(P[i][0]*P[j][0])
-        mix(i,j)
+    print(f'Result of task 1: {solution1}')
+
+if __name__ == "__main__":
+    main()
