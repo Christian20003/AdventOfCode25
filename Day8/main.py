@@ -24,31 +24,43 @@ def getDistances(data: List[Tuple[int, int, int]]) -> List[Distance]:
     result.sort(key=lambda x: x.distance)
     return result
 
-def solveTask1(data: List[Tuple[int, int, int]]) -> int:
-    distances = getDistances(data)
-    components: List[Set] = []
-    for idx, distance in enumerate(distances):
-        if idx == LIMIT: break
-        componenta = None
-        componentb = None
-        for component in components:
-            if componenta is not None and componentb is not None: break
-            if distance.a in component:
-                componenta = component
-            if distance.b in component:
-                componentb = component
-        if componenta is None and componentb is None:
-            components.append({distance.a, distance.b})
-        elif componenta is not None and componentb is None:
-            componenta.add(distance.b)
-        elif componenta is None and componentb is not None:
-            componentb.add(distance.a)
-        elif componenta == componentb: continue
-        else:
-            components.remove(componentb)
-            componenta.update(componentb)
+def mergeComponents(distance: Distance, components: List[Set]) -> List[Set]:
+    componenta = None
+    componentb = None
+    for component in components:
+        if componenta is not None and componentb is not None: break
+        if distance.a in component:
+            componenta = component
+        if distance.b in component:
+            componentb = component
+    if componenta is None and componentb is None:
+        components.append({distance.a, distance.b})
+    elif componenta is not None and componentb is None:
+        componenta.add(distance.b)
+    elif componenta is None and componentb is not None:
+        componentb.add(distance.a)
+    elif componenta != componentb:
+        components.remove(componentb)
+        componenta.update(componentb)
+    return components
+
+def getComponentSizes(components: List[Set]) -> int:
     components.sort(key=lambda x: x.__len__(), reverse=True)
     return reduce(lambda x,y: x*y,(len(component) for component in components[0:3]))
+
+def solveTasks(data: List[Tuple[int, int, int]]) -> Tuple[int, int]:
+    distances = getDistances(data)
+    components: List[Set] = []
+    task1 = 0
+    task2 = 0
+    for idx, distance in enumerate(distances):
+        if idx == LIMIT:
+            task1 = getComponentSizes(components)
+        components = mergeComponents(distance, components)
+        if len(components[0]) == len(data):
+            task2 = distance.a[0] * distance.b[0]
+            break
+    return task1, task2
 
 def parseFile() -> List[Tuple[int, int, int]]:
     with open(PATH, 'r') as file:
@@ -61,9 +73,10 @@ def parseFile() -> List[Tuple[int, int, int]]:
 
 def main():
     data = parseFile()
-    solution1 = solveTask1(data)
+    (solution1, solution2) = solveTasks(data)
 
     print(f'Result of task 1: {solution1}')
+    print(f'Result of task 2: {solution2}')
 
 if __name__ == "__main__":
     main()
